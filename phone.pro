@@ -1,3 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS = app package
-package.depends += app
+SUBDIRS = app package telephony-binding
+package.depends += app telephony-binding
