@@ -20,9 +20,15 @@ import QtQuick.Controls 2.0
 import QtMultimedia 5.5
 import AGL.Demo.Controls 1.0
 import 'models'
+import 'api' as API
 
 Item {
     id: root
+
+    API.Telephony {
+	    id: telephony
+	    url: bindingAddress
+    }
 
     signal showContacts
     function call(contact) {
@@ -106,19 +112,6 @@ Item {
             offImage: './images/HMI_Phone_Call.svg'
             opacity: number.text.length > 0 ? 1 : 0.25
 
-            Loader {
-                id: ringtone
-                active: false
-                sourceComponent: Component {
-                    SoundEffect {
-                        loops: SoundEffect.Infinite
-                        source: './Phone.wav'
-                        category: 'phone'
-                        Component.onCompleted: play()
-                    }
-                }
-            }
-
             onCheckedChanged: {
                 if (checked) {
                     if (number.text.length === 0) {
@@ -130,11 +123,11 @@ Item {
                     if (contact.name === '')
                         contact.name = 'Unknown'
                     history.insert(0, contact)
-                    ringtone.active = true
+		    telephony.dial(number.text)
                 } else {
                     name.text = ''
                     number.text = ''
-                    ringtone.active = false
+		    telephony.hangup()
                 }
             }
         }
