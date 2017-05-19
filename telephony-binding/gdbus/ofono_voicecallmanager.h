@@ -18,6 +18,11 @@
 
 #include "ofono_voicecallmanager_interface.h"
 
-OrgOfonoVoiceCallManager *ofono_voicecallmanager_init(const struct afb_binding_interface *iface, const gchar *, void(*)(OrgOfonoVoiceCallManager *manager, gchar *, gchar *));
+OrgOfonoVoiceCallManager
+*ofono_voicecallmanager_init(const struct afb_binding_interface *,
+			     const gchar *,
+			     void(*)(OrgOfonoVoiceCallManager *, gchar *, gchar *),
+			     void(*)(OrgOfonoVoiceCallManager *, gchar *, gchar *),
+			     void(*)(OrgOfonoVoiceCallManager *, gchar *));
 gchar *ofono_voicecallmanager_dial(OrgOfonoVoiceCallManager *, gchar *, gchar *);
 void ofono_hangup_all(OrgOfonoVoiceCallManager *);

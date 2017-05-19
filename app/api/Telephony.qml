@@ -39,7 +39,6 @@ WebSocket {
         var json = JSON.parse(message)
         var request = json[2].request
         var response = json[2].response
-        console.debug("response: " + JSON.stringify(response))
         switch (json[0]) {
             case msgid.call:
                 break
@@ -52,10 +51,22 @@ WebSocket {
                     console.debug("Hangup response")
                 }
                 break
-            case msg.reterr:
+            case msgid.reterr:
                 root.statusString = "Bad return value, binding probably not installed"
                 break
-            case MessageId.event:
+            case msgid.event:
+                var payload = JSON.parse(JSON.stringify(json[2]))
+                var event = payload.event
+                var data = payload.data
+                if (event == "telephony/incomingCall") {
+                    callClipColp = data.clip
+                    callStatus = "incoming"
+                } else if (event == "telephony/dialingCall") {
+                    callClipColp = data.colp
+                    callStatus = "dialing"
+                } else if (event == "telephony/terminatedCall") {
+                    callStatus = "idle"
+                }
                 break
         }
     }
@@ -63,7 +74,6 @@ WebSocket {
     onStatusChanged: {
         switch (status) {
             case WebSocket.Open:
-                console.debug("onStatusChanged: Open")
                 break
             case WebSocket.Error:
                 root.statusString = "WebSocket error: " + root.errorString
@@ -73,13 +83,11 @@ WebSocket {
 
     function sendSocketMesage(verb, parameter) {
         var requestJson = [ msgid.call, payloadLength, apiString + '/' + verb, parameter ]
-        console.debug("sendSocketMessage: " + JSON.stringify(requestJson))
         verbs.push(verb)
         sendTextMessage(JSON.stringify(requestJson))
     }
 
     function dial(number) {
-        console.debug("Dialing " + number)
         var parameterJson = { value: number }
         sendSocketMesage("dial", parameterJson)
     }

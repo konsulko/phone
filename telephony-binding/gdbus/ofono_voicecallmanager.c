@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+#define _GNU_SOURCE
+
 #include <string.h>
 
-#define _GNU_SOURCE
 #include <afb/afb-binding.h>
 
 #include "ofono_voicecallmanager_interface.h"
@@ -30,26 +31,38 @@ static void call_added(OrgOfonoVoiceCallManager *manager,
 	GVariantIter *iter;
 	gchar *key;
 	GVariant *value;
-	const gchar *state, *clip = NULL;
+	const gchar *state, *cl = NULL;
 
 	g_variant_get(properties, "a{sv}", &iter);
 	while (g_variant_iter_loop(iter, "{sv}", &key, &value)) {
-		if (!strcmp(key, "State"))
+		if (!strcmp(key, "State")) {
 			state = g_variant_get_string(value, NULL);
-		else if (!strcmp(key, "LineIdentification")) {
-			clip = g_variant_get_string(value, NULL);
+		} else if (!strcmp(key, "LineIdentification")) {
+			cl = g_variant_get_string(value, NULL);
 		}
 	}
 
 	if (!strcmp(state, "incoming")) {
-		g_signal_emit_by_name(manager, "incoming-call", op, clip ? clip : "");
+		g_signal_emit_by_name(manager, "incoming-call", op, cl ? cl : "");
+	} else if (!strcmp(state, "dialing")) {
+		g_signal_emit_by_name(manager, "dialing-call", op, cl ? cl : "");
 	}
 }
+
+static void call_removed(OrgOfonoVoiceCallManager *manager,
+			 gchar *op,
+			 GVariant *properties)
+{
+	g_signal_emit_by_name(manager, "terminated-call", op);
+}
+
 
 const OrgOfonoVoiceCallManager
 *ofono_voicecallmanager_init(const struct afb_binding_interface *iface,
 			     const gchar *op,
-			     void (*incoming_call)(OrgOfonoVoiceCallManager *manager,gchar *))
+			     void (*incoming_call)(OrgOfonoVoiceCallManager *manager,gchar *,gchar *),
+			     void (*dialing_call)(OrgOfonoVoiceCallManager *manager,gchar *,gchar *),
+			     void (*terminated_call)(OrgOfonoVoiceCallManager *manager,gchar *))
 {
 	interface = iface;
 
@@ -69,12 +82,47 @@ const OrgOfonoVoiceCallManager
 		     G_TYPE_STRING,
 		     G_TYPE_STRING);
 
+	g_signal_new("dialing-call",
+		     G_TYPE_OBJECT,
+		     G_SIGNAL_RUN_LAST,
+		     0,
+		     NULL,
+		     NULL,
+		     g_cclosure_marshal_generic,
+		     G_TYPE_NONE,
+		     2,
+		     G_TYPE_STRING,
+		     G_TYPE_STRING);
+
+	g_signal_new("terminated-call",
+		     G_TYPE_OBJECT,
+		     G_SIGNAL_RUN_LAST,
+		     0,
+		     NULL,
+		     NULL,
+		     g_cclosure_marshal_generic,
+		     G_TYPE_NONE,
+		     1,
+		     G_TYPE_STRING);
+
 	if (g_signal_connect(G_OBJECT(manager), "incoming-call", G_CALLBACK(incoming_call), NULL) <= 0) {
-		ERROR(interface, "Failed to connect to signal call-added\n");
+		ERROR(interface, "Failed to connect to signal incoming-call\n");
+	}
+
+	if (g_signal_connect(G_OBJECT(manager), "dialing-call", G_CALLBACK(dialing_call), NULL) <= 0) {
+		ERROR(interface, "Failed to connect to signal dialing-call\n");
+	}
+
+	if (g_signal_connect(G_OBJECT(manager), "terminated-call", G_CALLBACK(terminated_call), NULL) <= 0) {
+		ERROR(interface, "Failed to connect to signal terminated-call\n");
 	}
 
 	if (g_signal_connect(manager, "call-added", G_CALLBACK(call_added), NULL) <= 0) {
 		ERROR(interface, "Failed to connect to signal call-added\n");
+	}
+
+	if (g_signal_connect(manager, "call-removed", G_CALLBACK(call_removed), NULL) <= 0) {
+		ERROR(interface, "Failed to connect to signal call-removed\n");
 	}
 
 	return manager;

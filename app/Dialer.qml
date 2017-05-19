@@ -28,6 +28,33 @@ Item {
     API.Telephony {
 	    id: telephony
 	    url: bindingAddress
+        property string callStatus: "idle"
+        property string callClipColp: ""
+
+        onCallStatusChanged: {
+            if (callStatus == "incoming") {
+                ringtone.active = true
+                callStatusLabel.text = "Incoming call from " + callClipColp
+            } else if (callStatus == "dialing") {
+                callStatusLabel.text = "Calling " + callClipColp
+            } else if (callStatus == "idle") {
+                ringtone.active = false
+                callStatusLabel.text = ""
+            }
+        }
+    }
+
+    Loader {
+        id: ringtone
+        active: false
+        sourceComponent: Component {
+            SoundEffect {
+                loops: SoundEffect.Infinite
+                source: './Phone.wav'
+                category: 'phone'
+                Component.onCompleted: play()
+            }
+        }
     }
 
     signal showContacts
@@ -105,6 +132,12 @@ Item {
             }
         }
 
+        Label {
+            id: callStatusLabel
+            Layout.alignment: Qt.AlignHCenter
+            text: ""
+        }
+
         ToggleButton {
             id: callButton
             Layout.alignment: Qt.AlignHCenter
@@ -123,11 +156,11 @@ Item {
                     if (contact.name === '')
                         contact.name = 'Unknown'
                     history.insert(0, contact)
-		    telephony.dial(number.text)
+                    telephony.dial(number.text)
                 } else {
                     name.text = ''
                     number.text = ''
-		    telephony.hangup()
+                    telephony.hangup()
                 }
             }
         }

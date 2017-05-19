@@ -78,9 +78,33 @@ static void hangup(struct afb_req request)
 }
 
 
-static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *clip) {
-	WARNING(interface, "Incoming call from %s\n", clip);
+static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *clip)
+{
+	struct json_object *call_info;
+
+	call_info = json_object_new_object();
+	json_object_object_add(call_info, "clip", json_object_new_string(clip));
+	afb_daemon_broadcast_event(interface->daemon, "incomingCall", call_info);
 	incoming_call = strdup(op);
+}
+
+static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *colp)
+{
+	struct json_object *call_info;
+
+	call_info = json_object_new_object();
+	json_object_object_add(call_info, "colp", json_object_new_string(colp));
+	afb_daemon_broadcast_event(interface->daemon, "dialingCall", call_info);
+}
+
+static void terminated_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op)
+{
+	if (incoming_call) {
+		free(incoming_call);
+		incoming_call = NULL;
+	}
+
+	afb_daemon_broadcast_event(interface->daemon, "terminatedCall", NULL);
 }
 
 static void *main_loop_thread(void *unused)
@@ -101,7 +125,10 @@ static int ofono_init(void)
 	ofono_manager_init(interface);
 	const gchar *modem_path = ofono_manager_get_default_modem_path();
 	DEBUG(interface, "modem_path: %s\n", modem_path);
-	vcm = ofono_voicecallmanager_init(interface, modem_path, incoming_call_cb);
+	vcm = ofono_voicecallmanager_init(interface, modem_path,
+					  incoming_call_cb,
+					  dialing_call_cb,
+					  terminated_call_cb);
 	if (!vcm) {
 		ERROR(interface, "Failed to initialize voice call manager\n");
 		ret = -1;
