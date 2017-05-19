@@ -143,11 +143,12 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             onImage: './images/HMI_Phone_Hangup.svg'
             offImage: './images/HMI_Phone_Call.svg'
-            opacity: number.text.length > 0 ? 1 : 0.25
+            property var active: (number.text.length > 0) || (telephony.callStatus == "incoming")
+            opacity: active ? 1 : 0.25
 
             onCheckedChanged: {
                 if (checked) {
-                    if (number.text.length === 0) {
+                    if (!active) {
                         callButton.checked = false
                         return
                     }
@@ -156,7 +157,12 @@ Item {
                     if (contact.name === '')
                         contact.name = 'Unknown'
                     history.insert(0, contact)
-                    telephony.dial(number.text)
+                    if (telephony.callStatus == "incoming") {
+                        telephony.answer()
+                        ringtone.active = false;
+                    } else {
+                        telephony.dial(number.text)
+                    }
                 } else {
                     name.text = ''
                     number.text = ''

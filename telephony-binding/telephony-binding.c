@@ -70,6 +70,16 @@ static void hangup(struct afb_req request)
 	}
 }
 
+static void answer(struct afb_req request)
+{
+	if (incoming_call) {
+		DEBUG(interface, "Answer voice call\n");
+		voice_call = incoming_call;
+		ofono_voicecall_answer(voice_call);
+	} else {
+		ERROR(interface, "Answer: no incoming call");
+	}
+}
 
 static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *clip)
 {
@@ -146,6 +156,12 @@ static const struct afb_verb_desc_v1 verbs[]= {
 		.session	= AFB_SESSION_NONE,
 		.callback	= hangup,
 		.info		= "Hangup phone"
+	},
+	{
+		.name		= "answer",
+		.session	= AFB_SESSION_NONE,
+		.callback	= answer,
+		.info		= "Answer phone"
 	},
 	{NULL}
 };

@@ -92,6 +92,11 @@ WebSocket {
         sendSocketMesage("dial", parameterJson)
     }
 
+    function answer() {
+        var parameterJson = 'None'
+        sendSocketMesage("answer", parameterJson)
+    }
+
     function hangup() {
         var parameterJson = 'None'
         sendSocketMesage("hangup", parameterJson)

@@ -34,3 +34,10 @@ void ofono_voicecall_hangup(OrgOfonoVoiceCall *voice_call)
 
 	org_ofono_voice_call_call_hangup_sync(voice_call, NULL, &error);
 }
+
+void ofono_voicecall_answer(OrgOfonoVoiceCall *voice_call)
+{
+	GError *error = NULL;
+
+	org_ofono_voice_call_call_answer_sync(voice_call, NULL, &error);
+}
