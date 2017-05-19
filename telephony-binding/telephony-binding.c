@@ -18,7 +18,6 @@
 
 #include <glib.h>
 #include <json-c/json.h>
-#include <string.h>
 
 #include <afb/afb-binding.h>
 #include <afb/afb-service-itf.h>
@@ -30,12 +29,11 @@
 static const struct afb_binding_interface *interface;
 
 static OrgOfonoVoiceCallManager *vcm;
-static gchar *incoming_call;
-static gchar *voice_call;
+static OrgOfonoVoiceCall *incoming_call, *voice_call;
 
 static void dial(struct afb_req request)
 {
-	struct json_object *query, *val, *ret;
+	struct json_object *query, *val;
 	const char *number;
 
 	query = afb_req_json(request);
@@ -47,12 +45,8 @@ static void dial(struct afb_req request)
 			afb_req_fail(request, "active call", NULL);
 		} else {
 			DEBUG(interface, "dial: %s...\n", number);
-			voice_call = ofono_voicecallmanager_dial(vcm, (gchar *)number, "");
-			DEBUG(interface, "voice_call: %s\n", voice_call);
-			if (voice_call) {
-				ret = json_object_new_object();
-				json_object_object_add(ret, "VoiceCall", json_object_new_string(voice_call));
-				afb_req_success(request, ret, NULL);
+			if (ofono_voicecallmanager_dial(vcm, (gchar *)number, "")) {
+				afb_req_success(request, NULL, NULL);
 			} else {
 				ERROR(interface, "dial: failed to dial number\n");
 				afb_req_fail(request, "failed dial", NULL);
@@ -67,10 +61,9 @@ static void dial(struct afb_req request)
 static void hangup(struct afb_req request)
 {
 	if (voice_call) {
-		DEBUG(interface, "Hangup voice call: %s\n", voice_call);
-		ofono_hangup(voice_call);
+		DEBUG(interface, "Hangup voice call\n");
+		ofono_voicecall_hangup(voice_call);
 		afb_req_success(request, NULL, NULL);
-		voice_call = NULL;
 	} else {
 		ERROR(interface, "Hangup: no active call");
 		afb_req_fail(request, "failed hangup", NULL);
@@ -85,7 +78,7 @@ static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "clip", json_object_new_string(clip));
 	afb_daemon_broadcast_event(interface->daemon, "incomingCall", call_info);
-	incoming_call = strdup(op);
+	incoming_call = ofono_voicecall_new(op);
 }
 
 static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *colp)
@@ -95,14 +88,18 @@ static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar 
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "colp", json_object_new_string(colp));
 	afb_daemon_broadcast_event(interface->daemon, "dialingCall", call_info);
+	voice_call = ofono_voicecall_new(op);
 }
 
 static void terminated_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op)
 {
 	if (incoming_call) {
-		free(incoming_call);
+		ofono_voicecall_free(incoming_call);
 		incoming_call = NULL;
+	} else if (voice_call) {
+		ofono_voicecall_free(voice_call);
 	}
+	voice_call = NULL;
 
 	afb_daemon_broadcast_event(interface->daemon, "terminatedCall", NULL);
 }

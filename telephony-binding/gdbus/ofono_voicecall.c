@@ -16,13 +16,21 @@
 
 #include "ofono_voicecall_interface.h"
 
-void ofono_hangup(const gchar *op)
+OrgOfonoVoiceCall *ofono_voicecall_new(gchar *op)
+{
+	return org_ofono_voice_call_proxy_new_for_bus_sync(
+		G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+		"org.ofono", op, NULL, NULL);
+}
+
+void ofono_voicecall_free(OrgOfonoVoiceCall *voice_call)
+{
+	g_object_unref(G_OBJECT(voice_call));
+}
+
+void ofono_voicecall_hangup(OrgOfonoVoiceCall *voice_call)
 {
 	GError *error = NULL;
-
-	OrgOfonoVoiceCall *voice_call = org_ofono_voice_call_proxy_new_for_bus_sync(
-			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-			"org.ofono", op, NULL, NULL);
 
 	org_ofono_voice_call_call_hangup_sync(voice_call, NULL, &error);
 }

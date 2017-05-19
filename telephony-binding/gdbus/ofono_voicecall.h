@@ -16,4 +16,8 @@
 
 #include <glib.h>
 
-void ofono_hangup(gchar *);
+#include "ofono_voicecall_interface.h"
+
+OrgOfonoVoiceCall *ofono_voicecall_new(gchar *);
+void ofono_voicecall_free(OrgOfonoVoiceCall *);
+void ofono_voicecall_hangup(OrgOfonoVoiceCall *);
