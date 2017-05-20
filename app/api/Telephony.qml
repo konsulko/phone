@@ -65,7 +65,9 @@ WebSocket {
                     callClipColp = data.colp
                     callStatus = "dialing"
                 } else if (event == "telephony/terminatedCall") {
-                    callStatus = "idle"
+                    callStatus = "disconnected"
+                } else if (event == "telephony/callStateChanged") {
+                    callStatus = data.state
                 }
                 break
         }

@@ -18,7 +18,10 @@
 
 #include "ofono_voicecall_interface.h"
 
-OrgOfonoVoiceCall *ofono_voicecall_new(gchar *);
+OrgOfonoVoiceCall *
+ofono_voicecall_new(const struct afb_binding_interface *,
+		    gchar *,
+		    void (*)(OrgOfonoVoiceCall *,gchar *));
 void ofono_voicecall_free(OrgOfonoVoiceCall *);
 void ofono_voicecall_answer(OrgOfonoVoiceCall *);
 void ofono_voicecall_hangup(OrgOfonoVoiceCall *);

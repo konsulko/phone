@@ -25,10 +25,30 @@ import 'api' as API
 Item {
     id: root
 
+    function getTime() {
+        return new Date().getTime()
+    }
+
+    // Elapsed time in hh:mm:ss format
+    function getElapsedTimeString(startTime) {
+        var seconds = Math.floor((getTime() - startTime) / 1000);
+        var time = new Date(null);
+        time.setSeconds(seconds);
+        return time.toISOString().substr(11, 8);
+    }
+
+    Timer {
+        id: callTimer
+        interval: 1000
+        repeat: true
+        property var startTime
+        onTriggered: callStatusLabel.text = getElapsedTimeString(startTime)
+    }
+
     API.Telephony {
 	    id: telephony
 	    url: bindingAddress
-        property string callStatus: "idle"
+        property string callStatus: "disconnected"
         property string callClipColp: ""
 
         onCallStatusChanged: {
@@ -36,9 +56,13 @@ Item {
                 ringtone.active = true
                 callStatusLabel.text = "Incoming call from " + callClipColp
             } else if (callStatus == "dialing") {
-                callStatusLabel.text = "Calling " + callClipColp
-            } else if (callStatus == "idle") {
+                callStatusLabel.text = "Dialing " + callClipColp
+            } else if (callStatus == "active") {
+                callTimer.startTime = getTime()
+                callTimer.restart()
+            } else if (callStatus == "disconnected") {
                 ringtone.active = false
+                callTimer.stop()
                 callStatusLabel.text = ""
             }
         }

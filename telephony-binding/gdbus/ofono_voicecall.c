@@ -14,13 +14,64 @@
  * limitations under the License.
  */
 
+#define _GNU_SOURCE
+
+#include <string.h>
+#include <unistd.h>
+
+#include <afb/afb-binding.h>
+
 #include "ofono_voicecall_interface.h"
 
-OrgOfonoVoiceCall *ofono_voicecall_new(gchar *op)
+const struct afb_binding_interface *interface;
+
+static void property_changed(OrgOfonoVoiceCall *voice_call,
+			     gchar *property,
+			     GVariant *value)
 {
-	return org_ofono_voice_call_proxy_new_for_bus_sync(
-		G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-		"org.ofono", op, NULL, NULL);
+	GVariant *vvalue;
+	const gchar *state;
+
+	if (!strcmp(property, "State")) {
+		vvalue = g_variant_get_variant(value);
+		state = g_variant_get_string(vvalue, NULL);
+		g_signal_emit_by_name(voice_call, "call-state-changed", state);
+	}
+}
+
+OrgOfonoVoiceCall *ofono_voicecall_new(const struct afb_binding_interface *iface,
+				       gchar *op,
+				       void (*call_state_changed)(OrgOfonoVoiceCall *,gchar *))
+{
+	OrgOfonoVoiceCall *voice_call;
+
+	interface = iface;
+	voice_call = org_ofono_voice_call_proxy_new_for_bus_sync(
+			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+			"org.ofono", op, NULL, NULL);
+
+	if (voice_call) {
+		g_signal_new("call-state-changed",
+			     G_TYPE_OBJECT,
+			     G_SIGNAL_RUN_LAST,
+			     0,
+			     NULL,
+			     NULL,
+			     g_cclosure_marshal_generic,
+			     G_TYPE_NONE,
+			     1,
+			     G_TYPE_STRING);
+
+		if (g_signal_connect(G_OBJECT(voice_call), "call-state-changed", G_CALLBACK(call_state_changed), NULL) <= 0) {
+	                ERROR(interface, "Failed to connect to signal call-state-changed\n");
+					        }
+
+		if (g_signal_connect(voice_call, "property-changed", G_CALLBACK(property_changed), NULL) <= 0) {
+			ERROR(interface, "Failed to connect to signal call-added\n");
+		}
+	}
+
+	return voice_call;
 }
 
 void ofono_voicecall_free(OrgOfonoVoiceCall *voice_call)

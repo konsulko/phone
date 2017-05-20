@@ -81,6 +81,14 @@ static void answer(struct afb_req request)
 	}
 }
 
+static void call_state_changed_cb(OrgOfonoVoiceCall *vc, gchar *state)
+{
+	struct json_object *call_state;
+	call_state = json_object_new_object();
+	json_object_object_add(call_state, "state", json_object_new_string(state));
+	afb_daemon_broadcast_event(interface->daemon, "callStateChanged", call_state);
+}
+
 static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *clip)
 {
 	struct json_object *call_info;
@@ -88,7 +96,7 @@ static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "clip", json_object_new_string(clip));
 	afb_daemon_broadcast_event(interface->daemon, "incomingCall", call_info);
-	incoming_call = ofono_voicecall_new(op);
+	incoming_call = ofono_voicecall_new(interface, op, call_state_changed_cb);
 }
 
 static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *colp)
@@ -98,7 +106,7 @@ static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar 
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "colp", json_object_new_string(colp));
 	afb_daemon_broadcast_event(interface->daemon, "dialingCall", call_info);
-	voice_call = ofono_voicecall_new(op);
+	voice_call = ofono_voicecall_new(interface, op, call_state_changed_cb);
 }
 
 static void terminated_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op)
