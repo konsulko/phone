@@ -64,6 +64,10 @@ static void hangup(struct afb_req request)
 		DEBUG(interface, "Hangup voice call\n");
 		ofono_voicecall_hangup(voice_call);
 		afb_req_success(request, NULL, NULL);
+	} else if (incoming_call) {
+		DEBUG(interface, "Reject incoming call\n");
+		ofono_voicecall_hangup(incoming_call);
+		afb_req_success(request, NULL, NULL);
 	} else {
 		ERROR(interface, "Hangup: no active call");
 		afb_req_fail(request, "failed hangup", NULL);

@@ -54,14 +54,18 @@ Item {
         onCallStatusChanged: {
             if (callStatus == "incoming") {
                 ringtone.active = true
+                rejectButton.active = true
                 callStatusLabel.text = "Incoming call from " + callClipColp
             } else if (callStatus == "dialing") {
                 callStatusLabel.text = "Dialing " + callClipColp
             } else if (callStatus == "active") {
+                rejectButton.active = false
                 callTimer.startTime = getTime()
                 callTimer.restart()
             } else if (callStatus == "disconnected") {
                 ringtone.active = false
+                rejectButton.active = false
+                callButton.checked = false
                 callTimer.stop()
                 callStatusLabel.text = ""
             }
@@ -167,7 +171,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             onImage: './images/HMI_Phone_Hangup.svg'
             offImage: './images/HMI_Phone_Call.svg'
-            property var active: (number.text.length > 0) || (telephony.callStatus == "incoming")
+            property var active: (number.text.length > 0) || (telephony.callStatus == "incoming") || (telephony.callStatus == "active")
             opacity: active ? 1 : 0.25
 
             onCheckedChanged: {
@@ -190,6 +194,18 @@ Item {
                 } else {
                     name.text = ''
                     number.text = ''
+                    telephony.hangup()
+                }
+            }
+        }
+
+        Loader {
+            id: rejectButton
+            Layout.alignment: Qt.AlignHCenter
+            active: false
+            sourceComponent: ImageButton {
+                offImage: './images/HMI_Phone_Hangup.svg'
+                onClicked: {
                     telephony.hangup()
                 }
             }
