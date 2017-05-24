@@ -141,16 +141,26 @@ static int ofono_init(void)
 	/* Start the main loop thread */
 	pthread_create(&tid, NULL, main_loop_thread, NULL);
 
-	ofono_manager_init(interface);
-	const gchar *modem_path = ofono_manager_get_default_modem_path();
-	DEBUG(interface, "modem_path: %s\n", modem_path);
-	vcm = ofono_voicecallmanager_init(interface, modem_path,
-					  incoming_call_cb,
-					  dialing_call_cb,
-					  terminated_call_cb);
-	if (!vcm) {
-		ERROR(interface, "Failed to initialize voice call manager\n");
-		ret = -1;
+	ret = ofono_manager_init(interface);
+	if (ret == 0) {
+		const gchar *modem_path = ofono_manager_get_default_modem_path();
+		if (modem_path) {
+			DEBUG(interface, "modem_path: %s\n", modem_path);
+			vcm = ofono_voicecallmanager_init(interface, modem_path,
+					incoming_call_cb,
+					dialing_call_cb,
+					terminated_call_cb);
+			if (!vcm) {
+				ERROR(interface, "[telephony] failed to initialize voice call manager\n");
+				ret = -1;
+			}
+		} else {
+			ERROR(interface, "[telephony] default modem not set\n");
+			ret = -1;
+		}
+	} else {
+		ERROR(interface, "[telephony] failed to initialize ofono manager: " \
+				 "HFP device not connected or Bluetooth disabled\n");
 	}
 
 	return ret;

@@ -20,7 +20,7 @@
 #include <afb/afb-binding.h>
 #include <afb/afb-service-itf.h>
 
-void ofono_manager_init(const struct afb_binding_interface *iface);
+int ofono_manager_init(const struct afb_binding_interface *iface);
 const gchar *ofono_manager_get_default_modem_path(void);
 const gchar *ofono_manager_get_default_modem_name(void);
 const gchar *ofono_manager_get_default_modem_type(void);
