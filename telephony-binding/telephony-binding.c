@@ -19,14 +19,13 @@
 #include <glib.h>
 #include <json-c/json.h>
 
+#define AFB_BINDING_VERSION 2
 #include <afb/afb-binding.h>
 #include <afb/afb-service-itf.h>
 
 #include "ofono_manager.h"
 #include "ofono_voicecallmanager.h"
 #include "ofono_voicecall.h"
-
-static const struct afb_binding_interface *interface;
 
 static OrgOfonoVoiceCallManager *vcm;
 static OrgOfonoVoiceCall *incoming_call, *voice_call;
@@ -41,19 +40,19 @@ static void dial(struct afb_req request)
 	if (json_object_is_type(val, json_type_string)) {
 		number = json_object_get_string(val);
 		if (voice_call) {
-			ERROR(interface, "dial: cannot dial with active call");
+			AFB_ERROR("dial: cannot dial with active call");
 			afb_req_fail(request, "active call", NULL);
 		} else {
-			DEBUG(interface, "dial: %s...\n", number);
+			AFB_DEBUG("dial: %s...\n", number);
 			if (ofono_voicecallmanager_dial(vcm, (gchar *)number, "")) {
 				afb_req_success(request, NULL, NULL);
 			} else {
-				ERROR(interface, "dial: failed to dial number\n");
+				AFB_ERROR("dial: failed to dial number\n");
 				afb_req_fail(request, "failed dial", NULL);
 			}
 		}
 	} else {
-		ERROR(interface, "dial: no phone number parameter\n");
+		AFB_ERROR("dial: no phone number parameter\n");
 		afb_req_fail(request, "no number", NULL);
 	}
 }
@@ -61,15 +60,15 @@ static void dial(struct afb_req request)
 static void hangup(struct afb_req request)
 {
 	if (voice_call) {
-		DEBUG(interface, "Hangup voice call\n");
+		AFB_DEBUG("Hangup voice call\n");
 		ofono_voicecall_hangup(voice_call);
 		afb_req_success(request, NULL, NULL);
 	} else if (incoming_call) {
-		DEBUG(interface, "Reject incoming call\n");
+		AFB_DEBUG("Reject incoming call\n");
 		ofono_voicecall_hangup(incoming_call);
 		afb_req_success(request, NULL, NULL);
 	} else {
-		ERROR(interface, "Hangup: no active call");
+		AFB_ERROR("Hangup: no active call");
 		afb_req_fail(request, "failed hangup", NULL);
 	}
 }
@@ -77,11 +76,11 @@ static void hangup(struct afb_req request)
 static void answer(struct afb_req request)
 {
 	if (incoming_call) {
-		DEBUG(interface, "Answer voice call\n");
+		AFB_DEBUG("Answer voice call\n");
 		voice_call = incoming_call;
 		ofono_voicecall_answer(voice_call);
 	} else {
-		ERROR(interface, "Answer: no incoming call");
+		AFB_ERROR("Answer: no incoming call");
 	}
 }
 
@@ -90,7 +89,7 @@ static void call_state_changed_cb(OrgOfonoVoiceCall *vc, gchar *state)
 	struct json_object *call_state;
 	call_state = json_object_new_object();
 	json_object_object_add(call_state, "state", json_object_new_string(state));
-	afb_daemon_broadcast_event(interface->daemon, "callStateChanged", call_state);
+	afb_daemon_broadcast_event("callStateChanged", call_state);
 }
 
 static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *clip)
@@ -99,8 +98,8 @@ static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar
 
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "clip", json_object_new_string(clip));
-	afb_daemon_broadcast_event(interface->daemon, "incomingCall", call_info);
-	incoming_call = ofono_voicecall_new(interface, op, call_state_changed_cb);
+	afb_daemon_broadcast_event("incomingCall", call_info);
+	incoming_call = ofono_voicecall_new(op, call_state_changed_cb);
 }
 
 static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *colp)
@@ -109,8 +108,8 @@ static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar 
 
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "colp", json_object_new_string(colp));
-	afb_daemon_broadcast_event(interface->daemon, "dialingCall", call_info);
-	voice_call = ofono_voicecall_new(interface, op, call_state_changed_cb);
+	afb_daemon_broadcast_event("dialingCall", call_info);
+	voice_call = ofono_voicecall_new(op, call_state_changed_cb);
 }
 
 static void terminated_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op)
@@ -122,8 +121,7 @@ static void terminated_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op)
 		ofono_voicecall_free(voice_call);
 	}
 	voice_call = NULL;
-
-	afb_daemon_broadcast_event(interface->daemon, "terminatedCall", NULL);
+	afb_daemon_broadcast_event("terminatedCall", NULL);
 }
 
 static void *main_loop_thread(void *unused)
@@ -141,72 +139,71 @@ static int ofono_init(void)
 	/* Start the main loop thread */
 	pthread_create(&tid, NULL, main_loop_thread, NULL);
 
-	ret = ofono_manager_init(interface);
+	ret = ofono_manager_init();
 	if (ret == 0) {
 		const gchar *modem_path = ofono_manager_get_default_modem_path();
 		if (modem_path) {
-			DEBUG(interface, "modem_path: %s\n", modem_path);
-			vcm = ofono_voicecallmanager_init(interface, modem_path,
+			AFB_DEBUG("modem_path: %s\n", modem_path);
+			vcm = ofono_voicecallmanager_init(modem_path,
 					incoming_call_cb,
 					dialing_call_cb,
 					terminated_call_cb);
 			if (!vcm) {
-				ERROR(interface, "[telephony] failed to initialize voice call manager\n");
+				AFB_ERROR("failed to initialize voice call manager\n");
 				ret = -1;
 			}
 		} else {
-			ERROR(interface, "[telephony] default modem not set\n");
+			AFB_ERROR("default modem not set\n");
 			ret = -1;
 		}
 	} else {
-		ERROR(interface, "[telephony] failed to initialize ofono manager: " \
+		AFB_ERROR("failed to initialize ofono manager: " \
 				 "HFP device not connected or Bluetooth disabled\n");
 	}
 
 	return ret;
 }
 
-static const struct afb_verb_desc_v1 verbs[]= {
+static const struct afb_verb_v2 verbs[]= {
 	{
-		.name		= "dial",
-		.session	= AFB_SESSION_NONE,
+		.verb		= "dial",
 		.callback	= dial,
-		.info		= "Dial phone"
+		.auth		= NULL,
+		.session	= AFB_SESSION_NONE,
 	},
 	{
-		.name		= "hangup",
-		.session	= AFB_SESSION_NONE,
+		.verb		= "hangup",
 		.callback	= hangup,
-		.info		= "Hangup phone"
+		.auth		= NULL,
+		.session	= AFB_SESSION_NONE,
 	},
 	{
-		.name		= "answer",
-		.session	= AFB_SESSION_NONE,
+		.verb		= "answer",
 		.callback	= answer,
-		.info		= "Answer phone"
+		.auth		= NULL,
+		.session	= AFB_SESSION_NONE,
 	},
 	{NULL}
 };
 
-static const struct afb_binding binding_desc = {
-	.type = AFB_BINDING_VERSION_1,
-	.v1 = {
-		.info = "telephony service",
-		.prefix = "telephony",
-		.verbs = verbs
-	}
-};
-
-const struct afb_binding *afbBindingV1Register (const struct afb_binding_interface *itf)
+static int preinit()
 {
-	interface = itf;
+	AFB_NOTICE("Pre-init telephony service");
 
-	return &binding_desc;
+	return 0;
 }
 
-int afbBindingV1ServiceInit(struct afb_service service)
+static int init()
 {
-	DEBUG(interface, "Initializing telephony service\n");
+	AFB_NOTICE("Initializing telephony service");
 
 	return ofono_init();
 }
+
+const struct afb_binding_v2 afbBindingV2 = {
+	.api = "telephony",
+	.specification = NULL,
+	.verbs = verbs,
+	.preinit = preinit,
+	.init = init,
+};

@@ -18,11 +18,10 @@
 
 #include <string.h>
 
+#define AFB_BINDING_VERSION 2
 #include <afb/afb-binding.h>
 
 #include "ofono_voicecallmanager_interface.h"
-
-static const struct afb_binding_interface *interface;
 
 static void call_added(OrgOfonoVoiceCallManager *manager,
 		       gchar *op,
@@ -58,14 +57,11 @@ static void call_removed(OrgOfonoVoiceCallManager *manager,
 
 
 const OrgOfonoVoiceCallManager
-*ofono_voicecallmanager_init(const struct afb_binding_interface *iface,
-			     const gchar *op,
+*ofono_voicecallmanager_init(const gchar *op,
 			     void (*incoming_call)(OrgOfonoVoiceCallManager *manager,gchar *,gchar *),
 			     void (*dialing_call)(OrgOfonoVoiceCallManager *manager,gchar *,gchar *),
 			     void (*terminated_call)(OrgOfonoVoiceCallManager *manager,gchar *))
 {
-	interface = iface;
-
 	OrgOfonoVoiceCallManager *manager = org_ofono_voice_call_manager_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 			"org.ofono", op, NULL, NULL);
@@ -106,23 +102,23 @@ const OrgOfonoVoiceCallManager
 		     G_TYPE_STRING);
 
 	if (g_signal_connect(G_OBJECT(manager), "incoming-call", G_CALLBACK(incoming_call), NULL) <= 0) {
-		ERROR(interface, "Failed to connect to signal incoming-call\n");
+		AFB_ERROR("Failed to connect to signal incoming-call\n");
 	}
 
 	if (g_signal_connect(G_OBJECT(manager), "dialing-call", G_CALLBACK(dialing_call), NULL) <= 0) {
-		ERROR(interface, "Failed to connect to signal dialing-call\n");
+		AFB_ERROR("Failed to connect to signal dialing-call\n");
 	}
 
 	if (g_signal_connect(G_OBJECT(manager), "terminated-call", G_CALLBACK(terminated_call), NULL) <= 0) {
-		ERROR(interface, "Failed to connect to signal terminated-call\n");
+		AFB_ERROR("Failed to connect to signal terminated-call\n");
 	}
 
 	if (g_signal_connect(manager, "call-added", G_CALLBACK(call_added), NULL) <= 0) {
-		ERROR(interface, "Failed to connect to signal call-added\n");
+		AFB_ERROR("Failed to connect to signal call-added\n");
 	}
 
 	if (g_signal_connect(manager, "call-removed", G_CALLBACK(call_removed), NULL) <= 0) {
-		ERROR(interface, "Failed to connect to signal call-removed\n");
+		AFB_ERROR("Failed to connect to signal call-removed\n");
 	}
 
 	return manager;
@@ -136,7 +132,7 @@ gchar *ofono_voicecallmanager_dial(OrgOfonoVoiceCallManager *manager,
 	GError *error = NULL;
 
 	if (!manager) {
-		ERROR(interface, "Ofono VoiceCallmanager uninitialized\n");
+		AFB_ERROR("Ofono VoiceCallmanager uninitialized\n");
 		return NULL;
 	}
 
@@ -152,7 +148,7 @@ void ofono_voicecallmanager_hangup_all(OrgOfonoVoiceCallManager *manager)
 	GError *error = NULL;
 
 	if (!manager) {
-		ERROR(interface, "Ofono VoiceCallmanager uninitialized\n");
+		AFB_ERROR("Ofono VoiceCallmanager uninitialized\n");
 		return;
 	}
 

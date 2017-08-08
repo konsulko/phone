@@ -18,6 +18,7 @@
 
 #include <string.h>
 
+#define AFB_BINDING_VERSION 2
 #include <afb/afb-binding.h>
 
 #include "ofono_manager.h"
@@ -34,9 +35,8 @@ struct ofono_manager_modem
 
 static OrgOfonoManager *manager;
 static struct ofono_manager_modem default_modem;
-static const struct afb_binding_interface *interface;
 
-int ofono_manager_init(const struct afb_binding_interface *iface)
+int ofono_manager_init()
 {
 	GVariant *out_arg = NULL, *next, *value;
 	GError *error = NULL;
@@ -44,10 +44,8 @@ int ofono_manager_init(const struct afb_binding_interface *iface)
 	GVariantIter *iter, *iter2 = NULL;
 	int ret = 0;
 
-	interface = iface;
-
 	if (manager) {
-		ERROR(interface, "Ofono Manager already initialized\n");
+		AFB_ERROR("Ofono Manager already initialized\n");
 		return -1;
 	}
 
@@ -56,7 +54,7 @@ int ofono_manager_init(const struct afb_binding_interface *iface)
 		"org.ofono", "/", NULL, NULL);
 
 	if (!manager) {
-		ERROR(interface, "Ofono Manager not initialized\n");
+		AFB_ERROR("Ofono Manager not initialized\n");
 		return -1;
 	}
 
@@ -91,7 +89,7 @@ int ofono_manager_init(const struct afb_binding_interface *iface)
 const gchar *ofono_manager_get_default_modem_path(void)
 {
 	if (!manager) {
-		ERROR(interface, "Ofono Manager not initialized\n");
+		AFB_ERROR("Ofono Manager not initialized\n");
 	}
 
 	return default_modem.path;
@@ -100,7 +98,7 @@ const gchar *ofono_manager_get_default_modem_path(void)
 const gchar *ofono_manager_get_default_modem_name(void)
 {
 	if (!manager) {
-		ERROR(interface, "Ofono Manager not initialized\n");
+		AFB_ERROR("Ofono Manager not initialized\n");
 	}
 
 	return default_modem.name;
@@ -109,7 +107,7 @@ const gchar *ofono_manager_get_default_modem_name(void)
 const gchar *ofono_manager_get_default_modem_type(void)
 {
 	if (!manager) {
-		ERROR(interface, "Ofono Manager not initialized\n");
+		AFB_ERROR("Ofono Manager not initialized\n");
 	}
 
 	return default_modem.type;
@@ -118,7 +116,7 @@ const gchar *ofono_manager_get_default_modem_type(void)
 gboolean ofono_manager_get_default_modem_powered(void)
 {
 	if (!manager) {
-		ERROR(interface, "Ofono Manager not initialized\n");
+		AFB_ERROR("Ofono Manager not initialized\n");
 	}
 
 	return default_modem.powered;
@@ -127,7 +125,7 @@ gboolean ofono_manager_get_default_modem_powered(void)
 gboolean ofono_manager_get_default_modem_online(void)
 {
 	if (!manager) {
-		ERROR(interface, "Ofono Manager not initialized\n");
+		AFB_ERROR("Ofono Manager not initialized\n");
 	}
 
 	return default_modem.online;

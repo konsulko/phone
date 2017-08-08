@@ -19,8 +19,7 @@
 #include "ofono_voicecallmanager_interface.h"
 
 OrgOfonoVoiceCallManager
-*ofono_voicecallmanager_init(const struct afb_binding_interface *,
-			     const gchar *,
+*ofono_voicecallmanager_init(const gchar *,
 			     void(*)(OrgOfonoVoiceCallManager *, gchar *, gchar *),
 			     void(*)(OrgOfonoVoiceCallManager *, gchar *, gchar *),
 			     void(*)(OrgOfonoVoiceCallManager *, gchar *));

@@ -19,11 +19,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#define AFB_BINDING_VERSION 2
 #include <afb/afb-binding.h>
 
 #include "ofono_voicecall_interface.h"
-
-const struct afb_binding_interface *interface;
 
 static void property_changed(OrgOfonoVoiceCall *voice_call,
 			     gchar *property,
@@ -39,13 +38,11 @@ static void property_changed(OrgOfonoVoiceCall *voice_call,
 	}
 }
 
-OrgOfonoVoiceCall *ofono_voicecall_new(const struct afb_binding_interface *iface,
-				       gchar *op,
+OrgOfonoVoiceCall *ofono_voicecall_new(gchar *op,
 				       void (*call_state_changed)(OrgOfonoVoiceCall *,gchar *))
 {
 	OrgOfonoVoiceCall *voice_call;
 
-	interface = iface;
 	voice_call = org_ofono_voice_call_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 			"org.ofono", op, NULL, NULL);
@@ -63,11 +60,11 @@ OrgOfonoVoiceCall *ofono_voicecall_new(const struct afb_binding_interface *iface
 			     G_TYPE_STRING);
 
 		if (g_signal_connect(G_OBJECT(voice_call), "call-state-changed", G_CALLBACK(call_state_changed), NULL) <= 0) {
-	                ERROR(interface, "Failed to connect to signal call-state-changed\n");
+	                AFB_ERROR("Failed to connect to signal call-state-changed\n");
 					        }
 
 		if (g_signal_connect(voice_call, "property-changed", G_CALLBACK(property_changed), NULL) <= 0) {
-			ERROR(interface, "Failed to connect to signal call-added\n");
+			AFB_ERROR("Failed to connect to signal call-added\n");
 		}
 	}
 
