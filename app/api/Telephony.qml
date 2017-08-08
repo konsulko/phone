@@ -58,6 +58,7 @@ WebSocket {
                 var payload = JSON.parse(JSON.stringify(json[2]))
                 var event = payload.event
                 var data = payload.data
+                console.debug("event: " + event)
                 if (event == "telephony/incomingCall") {
                     callClipColp = data.clip
                     callStatus = "incoming"
@@ -76,6 +77,10 @@ WebSocket {
     onStatusChanged: {
         switch (status) {
             case WebSocket.Open:
+                sendSocketMessage("subscribe", { value: "callStateChanged" })
+                sendSocketMessage("subscribe", { value: "dialingCall" })
+                sendSocketMessage("subscribe", { value: "incomingCall" })
+                sendSocketMessage("subscribe", { value: "terminatedCall" })
                 break
             case WebSocket.Error:
                 root.statusString = "WebSocket error: " + root.errorString
@@ -83,7 +88,7 @@ WebSocket {
         }
     }
 
-    function sendSocketMesage(verb, parameter) {
+    function sendSocketMessage(verb, parameter) {
         var requestJson = [ msgid.call, payloadLength, apiString + '/' + verb, parameter ]
         verbs.push(verb)
         sendTextMessage(JSON.stringify(requestJson))
@@ -91,16 +96,16 @@ WebSocket {
 
     function dial(number) {
         var parameterJson = { value: number }
-        sendSocketMesage("dial", parameterJson)
+        sendSocketMessage("dial", parameterJson)
     }
 
     function answer() {
         var parameterJson = 'None'
-        sendSocketMesage("answer", parameterJson)
+        sendSocketMessage("answer", parameterJson)
     }
 
     function hangup() {
         var parameterJson = 'None'
-        sendSocketMesage("hangup", parameterJson)
+        sendSocketMessage("hangup", parameterJson)
     }
 }

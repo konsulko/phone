@@ -18,6 +18,7 @@
 
 #include <glib.h>
 #include <json-c/json.h>
+#include <string.h>
 
 #define AFB_BINDING_VERSION 2
 #include <afb/afb-binding.h>
@@ -29,6 +30,10 @@
 
 static OrgOfonoVoiceCallManager *vcm;
 static OrgOfonoVoiceCall *incoming_call, *voice_call;
+static struct afb_event call_state_changed_event;
+static struct afb_event dialing_call_event;
+static struct afb_event incoming_call_event;
+static struct afb_event terminated_call_event;
 
 static void dial(struct afb_req request)
 {
@@ -84,12 +89,54 @@ static void answer(struct afb_req request)
 	}
 }
 
+static void subscribe(struct afb_req request)
+{
+	const char *value = afb_req_value(request, "value");
+	if(value) {
+		if (!strcasecmp(value, "callStateChanged")) {
+			afb_req_subscribe(request, call_state_changed_event);
+		} else if (!strcasecmp(value, "dialingCall")) {
+			afb_req_subscribe(request, dialing_call_event);
+		} else if (!strcasecmp(value, "incomingCall")) {
+			afb_req_subscribe(request, incoming_call_event);
+		} else if (!strcasecmp(value, "terminatedCall")) {
+			afb_req_subscribe(request, terminated_call_event);
+		} else {
+			afb_req_fail(request, "failed", "Invalid event");
+			return;
+		}
+	}
+
+	afb_req_success(request, NULL, NULL);
+}
+
+static void unsubscribe(struct afb_req request)
+{
+	const char *value = afb_req_value(request, "value");
+	if(value) {
+		if (!strcasecmp(value, "callStateChanged")) {
+			afb_req_unsubscribe(request, call_state_changed_event);
+		} else if (!strcasecmp(value, "dialingCall")) {
+			afb_req_unsubscribe(request, dialing_call_event);
+		} else if (!strcasecmp(value, "incomingCall")) {
+			afb_req_unsubscribe(request, incoming_call_event);
+		} else if (!strcasecmp(value, "terminatedCall")) {
+			afb_req_unsubscribe(request, terminated_call_event);
+		} else {
+			afb_req_fail(request, "failed", "Invalid event");
+			return;
+		}
+	}
+
+	afb_req_success(request, NULL, NULL);
+}
+
 static void call_state_changed_cb(OrgOfonoVoiceCall *vc, gchar *state)
 {
 	struct json_object *call_state;
 	call_state = json_object_new_object();
 	json_object_object_add(call_state, "state", json_object_new_string(state));
-	afb_daemon_broadcast_event("callStateChanged", call_state);
+	afb_event_push(call_state_changed_event, call_state);
 }
 
 static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar *clip)
@@ -98,7 +145,7 @@ static void incoming_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar
 
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "clip", json_object_new_string(clip));
-	afb_daemon_broadcast_event("incomingCall", call_info);
+	afb_event_push(incoming_call_event, call_info);
 	incoming_call = ofono_voicecall_new(op, call_state_changed_cb);
 }
 
@@ -108,7 +155,7 @@ static void dialing_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op, gchar 
 
 	call_info = json_object_new_object();
 	json_object_object_add(call_info, "colp", json_object_new_string(colp));
-	afb_daemon_broadcast_event("dialingCall", call_info);
+	afb_event_push(dialing_call_event, call_info);
 	voice_call = ofono_voicecall_new(op, call_state_changed_cb);
 }
 
@@ -121,7 +168,7 @@ static void terminated_call_cb(OrgOfonoVoiceCallManager *manager, gchar *op)
 		ofono_voicecall_free(voice_call);
 	}
 	voice_call = NULL;
-	afb_daemon_broadcast_event("terminatedCall", NULL);
+	afb_event_push(terminated_call_event, NULL);
 }
 
 static void *main_loop_thread(void *unused)
@@ -135,6 +182,11 @@ static int ofono_init(void)
 {
 	pthread_t tid;
 	int ret = 0;
+
+	call_state_changed_event = afb_daemon_make_event("callStateChanged");
+	dialing_call_event = afb_daemon_make_event("dialingCall");
+	incoming_call_event = afb_daemon_make_event("incomingCall");
+	terminated_call_event = afb_daemon_make_event("terminatedCall");
 
 	/* Start the main loop thread */
 	pthread_create(&tid, NULL, main_loop_thread, NULL);
@@ -180,6 +232,18 @@ static const struct afb_verb_v2 verbs[]= {
 	{
 		.verb		= "answer",
 		.callback	= answer,
+		.auth		= NULL,
+		.session	= AFB_SESSION_NONE,
+	},
+	{
+		.verb		= "subscribe",
+		.callback	= subscribe,
+		.auth		= NULL,
+		.session	= AFB_SESSION_NONE,
+	},
+	{
+		.verb		= "unsubscribe",
+		.callback	= unsubscribe,
 		.auth		= NULL,
 		.session	= AFB_SESSION_NONE,
 	},
