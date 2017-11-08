@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Qt Company Ltd.
+ * Copyright (C) 2017 Konsulko Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +21,6 @@ import QtQuick.Controls 2.0
 import QtMultimedia 5.5
 import AGL.Demo.Controls 1.0
 import 'models'
-import 'api' as API
 
 Item {
     id: root
@@ -42,32 +42,33 @@ Item {
         interval: 1000
         repeat: true
         property var startTime
-        onTriggered: callStatusLabel.text = getElapsedTimeString(startTime)
+        onTriggered: callStateLabel.text = getElapsedTimeString(startTime)
     }
 
-    API.Telephony {
-	    id: telephony
-	    url: bindingAddress
-        property string callStatus: "disconnected"
-        property string callClipColp: ""
+    Connections {
+        target: telephony
 
-        onCallStatusChanged: {
-            if (callStatus == "incoming") {
-                ringtone.active = true
+        onConnectedChanged: {
+            // FIXME: keep dialpad inactive until connected
+        }
+
+        onCallStateChanged: {
+            if (telephony.callState == "incoming") {
                 rejectButton.active = true
-                callStatusLabel.text = "Incoming call from " + callClipColp
-            } else if (callStatus == "dialing") {
-                callStatusLabel.text = "Dialing " + callClipColp
-            } else if (callStatus == "active") {
+                ringtone.active = true
+                callStateLabel.text = "Incoming call from " + telephony.callClip
+            } else if (telephony.callState == "dialing") {
+                callStateLabel.text = "Dialing " + telephony.callColp
+            } else if (telephony.callState == "active") {
                 rejectButton.active = false
                 callTimer.startTime = getTime()
                 callTimer.restart()
-            } else if (callStatus == "disconnected") {
-                ringtone.active = false
+            } else if (telephony.callState == "disconnected") {
                 rejectButton.active = false
                 callButton.checked = false
                 callTimer.stop()
-                callStatusLabel.text = ""
+                ringtone.active = false
+                callStateLabel.text = ""
             }
         }
     }
@@ -161,7 +162,7 @@ Item {
         }
 
         Label {
-            id: callStatusLabel
+            id: callStateLabel
             Layout.alignment: Qt.AlignHCenter
             text: ""
         }
@@ -171,7 +172,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             onImage: './images/HMI_Phone_Hangup.svg'
             offImage: './images/HMI_Phone_Call.svg'
-            property var active: (number.text.length > 0) || (telephony.callStatus == "incoming") || (telephony.callStatus == "active")
+            property var active: (number.text.length > 0) || (telephony.callState == "incoming") || (telephony.callState == "active")
             opacity: active ? 1 : 0.25
 
             onCheckedChanged: {
@@ -185,7 +186,7 @@ Item {
                     if (contact.name === '')
                         contact.name = 'Unknown'
                     history.insert(0, contact)
-                    if (telephony.callStatus == "incoming") {
+                    if (telephony.callState == "incoming") {
                         telephony.answer()
                         ringtone.active = false;
                     } else {

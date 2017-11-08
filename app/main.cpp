@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Qt Company Ltd.
+ * Copyright (C) 2017 Konsulko Group
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +26,8 @@
 #ifdef HAVE_LIBHOMESCREEN
 #include <libhomescreen.hpp>
 #endif
+
+#include <telephony.h>
 
 int main(int argc, char *argv[])
 {
@@ -63,6 +66,8 @@ int main(int argc, char *argv[])
 	bindingAddress.setQuery(query);
 	QQmlContext *context = engine.rootContext();
 	context->setContextProperty(QStringLiteral("bindingAddress"), bindingAddress);
+	Telephony *telephony = new Telephony(bindingAddress);
+	context->setContextProperty("telephony", telephony);
     }
 
     engine.load(QUrl(QStringLiteral("qrc:/Phone.qml")));
