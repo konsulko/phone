@@ -55,7 +55,6 @@ Item {
         onCallStateChanged: {
             if (telephony.callState == "incoming") {
                 rejectButton.active = true
-                ringtone.active = true
                 callStateLabel.text = "Incoming call from " + telephony.callClip
             } else if (telephony.callState == "dialing") {
                 callStateLabel.text = "Dialing " + telephony.callColp
@@ -67,21 +66,7 @@ Item {
                 rejectButton.active = false
                 callButton.checked = false
                 callTimer.stop()
-                ringtone.active = false
                 callStateLabel.text = ""
-            }
-        }
-    }
-
-    Loader {
-        id: ringtone
-        active: false
-        sourceComponent: Component {
-            SoundEffect {
-                loops: SoundEffect.Infinite
-                source: './Phone.wav'
-                category: 'phone'
-                Component.onCompleted: play()
             }
         }
     }
@@ -188,7 +173,6 @@ Item {
                     history.insert(0, contact)
                     if (telephony.callState == "incoming") {
                         telephony.answer()
-                        ringtone.active = false;
                     } else {
                         telephony.dial(number.text)
                     }

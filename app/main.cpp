@@ -28,6 +28,7 @@
 #endif
 
 #include <telephony.h>
+#include "phone.h"
 
 int main(int argc, char *argv[])
 {
@@ -68,6 +69,8 @@ int main(int argc, char *argv[])
 	context->setContextProperty(QStringLiteral("bindingAddress"), bindingAddress);
 	Telephony *telephony = new Telephony(bindingAddress);
 	context->setContextProperty("telephony", telephony);
+	Phone *phone = new Phone(telephony);
+	QObject::connect(telephony, &Telephony::callStateChanged, phone, &Phone::onCallStateChanged);
     }
 
     engine.load(QUrl(QStringLiteral("qrc:/Phone.qml")));
